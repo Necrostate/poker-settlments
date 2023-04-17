@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Settlement</title>
+</head>
+
+<body>
+    <h1>Poker Settlement</h1>
+    <form id="participant-form">
+        <label for="participant-input">Enter the participant's name and amount separated by a comma:</label><br>
+        <input type="text" id="participant-input" name="participant" placeholder="Name, Amount">
+        <button type="button" onclick="addParticipant()">Add Participant</button>
+    </form>
+    <button onclick="settlePayments()">Settle Payments</button>
+    <div id="results"></div>
+
+    <script>
+        const participants = {};
+
+        function addParticipant() {
+            const inputLine = document.getElementById('participant-input').value;
+            const [name, amountStr] = inputLine.split(',');
+            const amount = parseFloat(amountStr.trim());
+            if (isNaN(amount) || !name) {
+                alert("Invalid input. Please enter a valid name and amount separated by a comma.");
+            } else {
+                participants[name.trim()] = amount;
+                document.getElementById('participant-input').value = '';
+                showParticipant(name, amount);
+            }
+        }
+
+        function showParticipant(name, amount) {
+            const participantList = document.getElementById('participant-list');
+            const participantElement = document.createElement('li');
+            const amountWithCurrency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(amount);
+            participantElement.innerText = `${name}: ${amountWithCurrency}`;
+            participantList.appendChild(participantElement);
+        }
+
+        function settlePayments() {
+            const sum = Object.values(participants).reduce((a, b) => a + b, 0);
+
+            if (Math.round(sum * 1000) !== 0) {
+                alert("Error: The sum of all amounts should be zero.");
+                return;
+            }
+
+            let sortedParticipants = Object.entries(participants).sort((a, b) => a[1] - b[1]);
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = '';
+
+            while (sortedParticipants.length > 0 && sortedParticipants[0][1] < 0) {
+                const [debtor, debt] = sortedParticipants.shift();
+                const [creditor, credit] = sortedParticipants.pop();
+
+                const amountToSend = parseFloat(Math.min(-debt, credit).toFixed(3));
+                const result = `${debtor} sends ${creditor} ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(amountToSend)}.`;
+                console.log(result);
+
+                const resultElement = document.createElement('p');
+                resultElement.innerText = result;
+                resultsContainer.appendChild(resultElement);
+
+                if (parseFloat((debt + amountToSend).toFixed(3)) !== 0) {
+                    sortedParticipants.unshift([debtor, debt + amountToSend]);
+                }
+                if (parseFloat((credit - amountToSend).toFixed(3)) !== 0) {
+                    sortedParticipants.push([creditor, credit - amountToSend]);
+                }
+                sortedParticipants.sort((a, b) => a[1] - b[1]);
+            }
+        }
+
+        document.addEventListener('keypress', function (event) {
+            if (event.keyCode === 13 && document.activeElement.id === 'participant-input') {
+                event.preventDefault();
+                addParticipant();
+            }
+        });
+    </script>
+    <h2>Participants:</h2>
+    <ul id="participant-list"></ul>
+</body>
+
+</html>
